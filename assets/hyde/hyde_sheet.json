@@ -1,0 +1,76 @@
+{
+  "image": "hyde_sheet.png",
+  "cell_width": 410,
+  "cell_height": 512,
+  "columns": 22,
+  "rows": 8,
+  "fps": 30.0,
+  "frames": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15,
+    16,
+    17,
+    18,
+    19,
+    20,
+    21,
+    22
+  ],
+  "loop": true,
+  "directions": [
+    {
+      "name": "front",
+      "angle": 0,
+      "row": 0
+    },
+    {
+      "name": "front_left",
+      "angle": 45,
+      "row": 1
+    },
+    {
+      "name": "left",
+      "angle": 90,
+      "row": 2
+    },
+    {
+      "name": "back_left",
+      "angle": 135,
+      "row": 3
+    },
+    {
+      "name": "back",
+      "angle": 180,
+      "row": 4
+    },
+    {
+      "name": "back_right",
+      "angle": 225,
+      "row": 5
+    },
+    {
+      "name": "right",
+      "angle": 270,
+      "row": 6
+    },
+    {
+      "name": "front_right",
+      "angle": 315,
+      "row": 7
+    }
+  ],
+  "note": "Row 0 is the top row. Column i is frame frames[i]. Angle 0 = front, 90 = character's left side."
+}

@@ -18,55 +18,34 @@
 <body>
   <div id="ui">
     <label>speed <span id="speed-val"></span><input id="speed" type="range" min="0" max="600" step="10" value="240"></label>
-    <label>anim fps <span id="fps-val"></span><input id="fps" type="range" min="4" max="30" step="1" value="14"></label>
+    <label>anim fps <span id="fps-val"></span><input id="fps" type="range" min="4" max="60" step="1" value="30"></label>
     <label>scale <span id="scale-val"></span><input id="scale" type="range" min="10" max="150" step="5" value="50"></label>
     <label><input id="reverse" type="checkbox" checked style="width:auto;margin-right:6px">reverse anim</label>
   </div>
   <script type="module">
     import kaplay from "./lib/kaplay.mjs"
 
-    // Frames 18-21 of every direction are pixel-identical duplicates of frame 1
-    // (verified), so the true walk cycle is frames 1-17.
-    const W = 410, H = 512, N = 17
     let SPEED = 240
-    let FPS = 14
+    let FPS = 30
     const dirFiles = {
       up: "back", upleft: "back_left", upright: "back_right",
       left: "left", right: "right",
       down: "front", downleft: "front_left", downright: "front_right",
     }
-    const pad = (n) => String(n).padStart(4, "0")
 
-    kaplay({ background: "#222222", width: W * 2, height: H * 2 })
+    // Layout and frame data come from the sheet's metadata file.
+    const meta = await (await fetch("hyde/hyde_sheet.json")).json()
+    const COLS = meta.columns
+    const N = meta.frames.length
+    // The test page lives next to the hyde/ folder; the JSON points at the image by name.
+    const rows = Object.fromEntries(meta.directions.map((d) => [d.name, d.row]))
 
-    // Composite each direction's 21 PNGs into one per-direction spritesheet.
-    async function loadDirection(d) {
-      const imgs = await Promise.all(Array.from({ length: N }, (_, i) =>
-        new Promise((res, rej) => {
-          const img = new Image()
-          img.onload = () => res(img)
-          img.onerror = () => rej(new Error(`frames/${d}/${d}_${pad(i + 1)}.png`))
-          img.src = `frames/${d}/${d}_${pad(i + 1)}.png`
-        })))
-      const sheet = document.createElement("canvas")
-      sheet.width = W * N
-      sheet.height = H
-      const ctx = sheet.getContext("2d")
-      imgs.forEach((img, i) => ctx.drawImage(img, i * W, 0))
-      loadSprite(d, sheet.toDataURL(), { sliceX: N })
-    }
+    kaplay({ background: "#222222", width: meta.cell_width * 2, height: meta.cell_height * 2 })
 
-    const DIRECTIONS = ["front","back","left","right","front_left","front_right","back_left","back_right"]
-    await Promise.all(DIRECTIONS.map(loadDirection))
+    // One packed sheet: 8 direction rows x COLS frames per row, sliced row-major.
+    loadSprite("hyde", `hyde/${meta.image}`, { sliceX: COLS, sliceY: meta.directions.length })
 
-    // One object per direction, stacked on the same spot; toggling visibility switches facing.
-    const players = {}
-    for (const d of DIRECTIONS) {
-      const p = add([anchor("bot"), sprite(d), scale(0.5), pos(center())])
-      p.hidden = d !== "front"
-      players[d] = p
-    }
-    const all = Object.values(players)
+    const player = add([anchor("bot"), sprite("hyde"), scale(0.5), pos(center())])
 
     function bind(id, fmt, apply) {
       const input = document.getElementById(id)
@@ -80,10 +59,12 @@
       update()
     }
     bind("speed", (v) => v + " px/s", (v) => { SPEED = v })
+    const fpsEl = document.getElementById("fps")
+    fpsEl.value = meta.fps
     bind("fps", (v) => v + " fps", (v) => { FPS = v })
     bind("scale", (v) => (v / 100).toFixed(2) + "x", (v) => {
       const s = v / 100
-      all.forEach((p) => (p.scale = vec2(s, s)))
+      player.scale = vec2(s, s)
     })
     const reverseEl = document.getElementById("reverse")
     let REVERSE = reverseEl.checked
@@ -108,20 +89,16 @@
       if (x !== 0 || y !== 0) {
         const len = Math.sqrt(x * x + y * y)
         // p.move() multiplies by dt() internally - pass velocity, not a step.
-        all.forEach((p) => p.move(x / len * SPEED, y / len * SPEED))
+        player.move(x / len * SPEED, y / len * SPEED)
         walkT += dt()
 
-        const dir = directionFromInput(x, y)
-        if (dir !== facing) {
-          players[facing].hidden = true
-          players[dir].hidden = false
-          facing = dir
-        }
+        facing = directionFromInput(x, y)
         const f = Math.floor(walkT * FPS) % N
-        players[facing].frame = REVERSE ? (N - f) % N : f
+        const col = REVERSE ? (N - f) % N : f
+        player.frame = rows[facing] * COLS + col
       } else {
         walkT = 0
-        players[facing].frame = 0
+        player.frame = rows[facing] * COLS
       }
     })
   </script>
